@@ -5,6 +5,10 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Xamarin.Forms;
+using Xamarin.Essentials;
+using System.IO;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Persona_Compendium.ViewModels
 {
@@ -12,7 +16,7 @@ namespace Persona_Compendium.ViewModels
     {
         private Item _selectedItem;
 
-        public ObservableCollection<Item> Items { get; }
+        public ObservableCollection<Persona> Items { get; }
         public Command LoadItemsCommand { get; }
         public Command AddItemCommand { get; }
         public Command<Item> ItemTapped { get; }
@@ -20,7 +24,7 @@ namespace Persona_Compendium.ViewModels
         public ItemsViewModel()
         {
             Title = "Browse";
-            Items = new ObservableCollection<Item>();
+            Items = new ObservableCollection<Persona>();
             LoadItemsCommand = new Command(async () => await ExecuteLoadItemsCommand());
 
             ItemTapped = new Command<Item>(OnItemSelected);
@@ -34,11 +38,20 @@ namespace Persona_Compendium.ViewModels
 
             try
             {
+                List<Persona> personaList;
                 Items.Clear();
-                var items = await DataStore.GetItemsAsync(true);
-                foreach (var item in items)
+                // Read and list personas
+                using(var stream = await FileSystem.OpenAppPackageFileAsync("p5r_personalist.json"))
                 {
-                    Items.Add(item);
+                    using(var reader = new StreamReader(stream))
+                    {
+                        var contents = await reader.ReadToEndAsync();
+                        personaList = JsonConvert.DeserializeObject<List<Persona>>(contents);
+
+                        Console.WriteLine(personaList.Count);
+
+                        foreach (var persona in personaList) Items.Add(persona);
+                    }
                 }
             }
             catch (Exception ex)
